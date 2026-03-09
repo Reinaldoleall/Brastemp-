@@ -8,23 +8,24 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-    <!-- Biblioteca para gerar PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <!-- Biblioteca para gerar Excel -->
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <style>
         body { font-family: 'Roboto', sans-serif; -webkit-tap-highlight-color: transparent; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* Estilo dos itens selecionáveis */
         .product-item {
             transition: all 0.2s ease;
             cursor: pointer;
         }
         .product-item.selected {
-            background-color: #EE2E31; /* Vermelho Brastemp */
+            background-color: #EE2E31;
             color: white;
             border-color: #EE2E31;
             box-shadow: 0 4px 6px -1px rgba(238, 46, 49, 0.3);
@@ -32,8 +33,15 @@
         .product-item.selected i {
             color: white;
         }
+        .product-item.indisponivel {
+            background-color: #6B7280;
+            color: white;
+            border-color: #6B7280;
+        }
+        .product-item.indisponivel i {
+            color: white;
+        }
         
-        /* Modal de quantidade */
         .quantity-modal {
             position: fixed;
             inset: 0;
@@ -52,12 +60,11 @@
             border-radius: 1.5rem;
             padding: 1.5rem;
             width: 90%;
-            max-width: 320px;
+            max-width: 360px;
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
             animation: slideUp 0.3s ease-out;
         }
         
-        /* Badge de quantidade */
         .quantity-badge {
             position: absolute;
             top: -5px;
@@ -65,8 +72,8 @@
             background-color: #EE2E31;
             color: white;
             border-radius: 9999px;
-            width: 20px;
-            height: 20px;
+            width: 22px;
+            height: 22px;
             font-size: 11px;
             display: flex;
             align-items: center;
@@ -74,8 +81,49 @@
             font-weight: bold;
             border: 2px solid white;
         }
+        .indisponivel-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: #6B7280;
+            color: white;
+            border-radius: 9999px;
+            width: 22px;
+            height: 22px;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            border: 2px solid white;
+        }
         
-        /* Animação */
+        .cd-input-group {
+            display: flex;
+            gap: 0.5rem;
+            margin: 1rem 0;
+        }
+        .cd-input-group input {
+            flex: 1;
+            text-align: center;
+            padding: 0.75rem 0.25rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 0.75rem;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        .cd-input-group input:focus {
+            border-color: #EE2E31;
+            outline: none;
+        }
+        .cd-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #6B7280;
+            text-transform: uppercase;
+            margin-bottom: 0.25rem;
+        }
+        
         @keyframes slideUp {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
@@ -88,7 +136,6 @@
             animation: fadeIn 0.3s ease-out forwards;
         }
 
-        /* Estilo para botão Excel */
         .btn-excel {
             background-color: #1D6F42;
             color: white;
@@ -96,20 +143,176 @@
         .btn-excel:hover {
             background-color: #155A32;
         }
+
+        .add-product-btn {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            background-color: #EE2E31;
+            color: white;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(238, 46, 49, 0.5);
+            cursor: pointer;
+            z-index: 45;
+            transition: transform 0.2s;
+        }
+        .add-product-btn:hover {
+            transform: scale(1.1);
+        }
+        .add-product-btn:active {
+            transform: scale(0.95);
+        }
+        
+        /* Auth Overlay Styles */
+        #auth-overlay {
+            position: fixed;
+            inset: 0;
+            background-color: #f3f4f6;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .auth-card {
+            background: white;
+            border-radius: 1.5rem;
+            padding: 2.5rem 1.5rem;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        .google-btn {
+            background-color: white;
+            color: #374151;
+            border: 2px solid #e5e7eb;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            padding: 12px;
+            border-radius: 1rem;
+            margin-top: 20px;
+            transition: all 0.2s;
+        }
+        .google-btn:hover {
+            background-color: #f9fafb;
+            border-color: #d1d5db;
+        }
+        .google-btn img {
+            width: 24px;
+            height: 24px;
+        }
+
+        .load-firebase-btn {
+            position: fixed;
+            bottom: 156px;
+            right: 20px;
+            background-color: #3b82f6;
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(59, 130, 246, 0.5);
+            cursor: pointer;
+            z-index: 45;
+            transition: transform 0.2s;
+        }
+        .load-firebase-btn:hover {
+            transform: scale(1.1);
+        }
+        .load-firebase-btn:active {
+            transform: scale(0.95);
+        }
+        .toast-notification {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #333;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 200;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            animation: slideUp 0.3s ease-out;
+        }
     </style>
 </head>
 <body class="bg-gray-100 pb-24">
+  
+    <!-- Auth Overlay -->
+    <div id="auth-overlay">
+        <div class="auth-card">
+            <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-clipboard-check text-4xl text-[#EE2E31]"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-800 mb-2">Mix Brastemp</h2>
+            <p class="text-gray-500 text-sm mb-6">Faça login para salvar suas planilhas e acessar o histórico em qualquer dispositivo.</p>
+            
+            <button id="google-login-btn" class="google-btn shadow-sm">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="Google">
+                Entrar com o Google
+            </button>
+        </div>
+    </div>
 
-    <!-- Modal de Quantidade -->
+  <!-- Logo Carrefour -->
+<div class="fixed top-16 right-4 z-50 cursor-pointer" id="carrefour-logo">
+    <img src="./carrefour.png" 
+         alt="Carrefour" 
+         class="w-12 h-12 object-contain bg-white rounded-full shadow-lg p-1 hover:scale-110 transition-transform">
+</div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast-notification hidden"></div>
+
+    <!-- Modal de Quantidade com 3 CDs -->
     <div id="quantity-modal" class="quantity-modal">
         <div class="quantity-card">
-            <h3 class="text-lg font-bold text-gray-800 mb-4" id="modal-product-name">Produto</h3>
-            <p class="text-sm text-gray-500 mb-4">Quantidade disponível no CD:</p>
-            <div class="flex items-center justify-between mb-6">
-                <button id="decrease-qty" class="w-12 h-12 rounded-full bg-gray-200 text-gray-600 text-2xl font-bold hover:bg-gray-300 transition flex items-center justify-center">−</button>
-                <input type="number" id="product-quantity" value="1" min="0" max="99" class="w-20 text-center text-2xl font-bold border-2 border-gray-200 rounded-xl p-2 focus:border-red-500 focus:outline-none">
-                <button id="increase-qty" class="w-12 h-12 rounded-full bg-gray-200 text-gray-600 text-2xl font-bold hover:bg-gray-300 transition flex items-center justify-center">+</button>
+            <h3 class="text-lg font-bold text-gray-800 mb-1" id="modal-product-name">Produto</h3>
+            <p class="text-sm text-gray-500 mb-2" id="modal-product-category">Categoria</p>
+            
+            <p class="text-xs text-gray-500 uppercase tracking-wider">Código SAP</p>
+            <p id="modal-product-code" class="text-lg font-bold text-[#EE2E31] mb-3"></p>
+            
+            <!-- Campos para os 3 CDs -->
+            <div class="mb-4">
+                <p class="text-sm font-medium text-gray-700 mb-2">Quantidade por CD:</p>
+                <div class="grid grid-cols-3 gap-2">
+                    <div>
+                        <div class="cd-label text-center">RJ1401</div>
+                        <input type="number" id="cd-rj1401" min="0" value="0" class="w-full text-center p-2 border-2 rounded-xl">
+                    </div>
+                    <div>
+                        <div class="cd-label text-center">SP1200</div>
+                        <input type="number" id="cd-sp1200" min="0" value="0" class="w-full text-center p-2 border-2 rounded-xl">
+                    </div>
+                    <div>
+                        <div class="cd-label text-center">SP1500</div>
+                        <input type="number" id="cd-sp1500" min="0" value="0" class="w-full text-center p-2 border-2 rounded-xl">
+                    </div>
+                </div>
             </div>
+            
+            <div class="flex gap-2 mb-4">
+                <button id="set-indisponivel" class="flex-1 bg-gray-600 text-white font-bold py-3 rounded-xl hover:bg-gray-700 transition shadow-lg">
+                    <i class="fas fa-times-circle mr-1"></i> IND
+                </button>
+            </div>
+            
             <div class="flex gap-3">
                 <button id="cancel-quantity" class="flex-1 py-3 border-2 border-gray-300 text-gray-600 font-bold rounded-xl hover:bg-gray-100 transition">Cancelar</button>
                 <button id="confirm-quantity" class="flex-1 bg-[#EE2E31] text-white font-bold py-3 rounded-xl hover:bg-red-700 transition shadow-lg">Confirmar</button>
@@ -117,16 +320,119 @@
         </div>
     </div>
 
-    <!-- Header Brastemp (vermelho) -->
+    <!-- Modal de Adicionar Produto -->
+    <div id="add-product-modal" class="fixed inset-0 bg-black bg-opacity-60 z-[70] hidden flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-5">
+            <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                <i class="fas fa-plus-circle text-[#EE2E31] mr-2"></i> Adicionar Produto
+            </h3>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs text-gray-500 font-bold uppercase">Categoria</label>
+                    <select id="new-product-category" class="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-red-500 focus:outline-none">
+                        <option value="Geladeiras">Geladeiras</option>
+                        <option value="Lavadora">Lavadora</option>
+                        <option value="Fogão">Fogão</option>
+                        <option value="Cooktop">Cooktop</option>
+                        <option value="MWO">Microondas</option>
+                        <option value="Freezer">Freezer</option>
+                        <option value="Outros">Outros</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="text-xs text-gray-500 font-bold uppercase">Modelo</label>
+                    <input type="text" id="new-product-code" placeholder="Ex: BRM44HB" class="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-red-500 focus:outline-none">
+                </div>
+                
+                <div>
+                    <label class="text-xs text-gray-500 font-bold uppercase">Código SAP</label>
+                    <input type="text" id="new-product-sap" placeholder="Ex: 4222342" class="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-red-500 focus:outline-none">
+                </div>
+            </div>
+            
+            <div class="flex gap-3 mt-6">
+                <button id="cancel-add-product" class="flex-1 py-3 border-2 border-gray-300 text-gray-600 font-bold rounded-xl hover:bg-gray-100 transition">Cancelar</button>
+                <button id="confirm-add-product" class="flex-1 bg-[#EE2E31] text-white font-bold py-3 rounded-xl hover:bg-red-700 transition shadow-lg">Adicionar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Edição com 3 CDs -->
+    <div id="edit-quantity-modal" class="fixed inset-0 bg-black bg-opacity-60 z-[80] hidden flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-5">
+            <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                <i class="fas fa-edit text-[#EE2E31] mr-2"></i> Editar Produto
+            </h3>
+            
+            <div id="edit-product-info" class="mb-4 p-3 bg-gray-50 rounded-xl">
+                <p id="edit-product-name" class="font-bold text-gray-800"></p>
+                <p id="edit-product-code" class="text-sm text-gray-600"></p>
+            </div>
+            
+            <div class="mb-4">
+                <p class="text-sm font-medium text-gray-700 mb-2">Quantidade por CD:</p>
+                <div class="grid grid-cols-3 gap-2">
+                    <div>
+                        <div class="cd-label text-center">RJ1401</div>
+                        <input type="number" id="edit-cd-rj1401" min="0" value="0" class="w-full text-center p-2 border-2 rounded-xl">
+                    </div>
+                    <div>
+                        <div class="cd-label text-center">SP1200</div>
+                        <input type="number" id="edit-cd-sp1200" min="0" value="0" class="w-full text-center p-2 border-2 rounded-xl">
+                    </div>
+                    <div>
+                        <div class="cd-label text-center">SP1500</div>
+                        <input type="number" id="edit-cd-sp1500" min="0" value="0" class="w-full text-center p-2 border-2 rounded-xl">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex gap-2 mb-3">
+                <button id="edit-set-indisponivel" class="flex-1 bg-gray-600 text-white font-bold py-3 rounded-xl hover:bg-gray-700 transition shadow-lg">
+                    <i class="fas fa-times-circle mr-1"></i> IND
+                </button>
+                <button id="edit-remove-product" class="flex-1 bg-red-600 text-white font-bold py-3 rounded-xl hover:bg-red-700 transition shadow-lg">
+                    <i class="fas fa-trash mr-1"></i> Remover
+                </button>
+            </div>
+            
+            <div class="flex gap-3">
+                <button id="cancel-edit" class="flex-1 py-3 border-2 border-gray-300 text-gray-600 font-bold rounded-xl hover:bg-gray-100 transition">Cancelar</button>
+                <button id="confirm-edit" class="flex-1 bg-[#EE2E31] text-white font-bold py-3 rounded-xl hover:bg-red-700 transition shadow-lg">Atualizar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header -->
     <header class="bg-[#EE2E31] text-white p-4 sticky top-0 z-50 shadow-md flex justify-between items-center">
         <div class="flex items-center gap-2">
             <i class="fas fa-clipboard-check"></i>
             <h1 class="text-lg font-bold tracking-wide">Mix Brastemp</h1>
         </div>
-        <button id="reset-all" class="text-xs bg-red-700 hover:bg-red-800 border border-red-500 px-3 py-1 rounded-full transition">
-            <i class="fas fa-eraser mr-1"></i> Limpar
-        </button>
+        <div class="flex gap-2">
+            <button id="export-excel" class="text-xs bg-green-700 hover:bg-green-800 px-3 py-1 rounded-full transition">
+                <i class="fas fa-file-excel mr-1"></i> Excel
+            </button>
+            <button id="export-pdf" class="text-xs bg-red-700 hover:bg-red-800 px-3 py-1 rounded-full transition">
+                <i class="fas fa-file-pdf mr-1"></i> PDF
+            </button>
+            <button id="reset-all" class="text-xs bg-red-700 hover:bg-red-800 border border-red-500 px-3 py-1 rounded-full transition">
+                <i class="fas fa-eraser mr-1"></i> Limpar
+            </button>
+        </div>
     </header>
+
+    <!-- Botão flutuante para carregar do Firebase -->
+    <div id="load-firebase-float" class="load-firebase-btn" title="Carregar última planilha do Firebase">
+        <i class="fas fa-cloud-download-alt text-xl"></i>
+    </div>
+
+    <!-- Botão flutuante para adicionar produto -->
+    <div id="add-product-float" class="add-product-btn">
+        <i class="fas fa-plus text-2xl"></i>
+    </div>
 
     <div class="container mx-auto p-4 max-w-md">
         
@@ -141,19 +447,25 @@
                     <input type="text" id="id-rede" placeholder="ID Loja" class="w-full bg-gray-50 p-3 rounded-xl border-none focus:ring-2 focus:ring-red-500 text-gray-700 text-sm transition">
                     <input type="text" id="filial" placeholder="Filial" class="w-full bg-gray-50 p-3 rounded-xl border-none focus:ring-2 focus:ring-red-500 text-gray-700 text-sm transition">
                 </div>
-                <div class="relative">
-                    <span class="absolute left-3 top-3 text-gray-400 text-xs">Data</span>
-                    <input type="date" id="data" class="w-full bg-gray-50 pt-6 pb-2 px-3 rounded-xl border-none focus:ring-2 focus:ring-red-500 text-gray-700 text-sm transition">
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="relative">
+                        <span class="absolute left-3 top-3 text-gray-400 text-xs">Data</span>
+                        <input type="date" id="data" class="w-full bg-gray-50 pt-6 pb-2 px-3 rounded-xl border-none focus:ring-2 focus:ring-red-500 text-gray-700 text-sm transition">
+                    </div>
+                    <input type="text" id="visitante" placeholder="Seu Nome" class="w-full bg-gray-50 p-3 rounded-xl border-none focus:ring-2 focus:ring-red-500 text-gray-700 text-sm transition">
+                </div>
+                <div>
+                    <textarea id="observacao" placeholder="Observações (ex: produtos de linha nova não encontrados)" rows="2" class="w-full bg-gray-50 p-3 rounded-xl border-none focus:ring-2 focus:ring-red-500 text-gray-700 text-sm transition"></textarea>
                 </div>
             </div>
         </div>
 
         <div class="bg-red-50 border-l-4 border-red-500 p-3 rounded-r mb-4 shadow-sm">
-            <p class="text-red-800 text-xs font-bold uppercase tracking-wider mb-1">Instruções</p>
-            <h2 class="text-gray-800 text-sm">Toque nos produtos para adicionar a quantidade disponível no CD da loja.</h2>
+            <p class="text-red-800 text-xs font-bold uppercase tracking-wider mb-1">Instruções - 3 CDs</p>
+            <h2 class="text-gray-800 text-sm">Toque nos produtos para lançar quantidades nos CDs (RJ1401, SP1200, SP1500). Toque duas vezes para editar. O badge mostra a soma total.</h2>
         </div>
 
-        <!-- Container de Produtos (Gerado via JS) -->
+        <!-- Container de Produtos -->
         <div id="products-container" class="space-y-4">
             <!-- As categorias serão injetadas aqui -->
         </div>
@@ -166,7 +478,7 @@
         <div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl shadow-2xl transform transition-transform duration-300 max-h-[90vh] flex flex-col">
             
             <div class="p-4 border-b flex justify-between items-center bg-gray-50 rounded-t-2xl">
-                <h3 class="font-bold text-gray-800">Mix Gerado</h3>
+                <h3 class="font-bold text-gray-800">Mix Gerado - 3 CDs</h3>
                 <button id="close-modal" class="text-gray-500 hover:text-gray-700 bg-gray-200 rounded-full w-8 h-8 flex items-center justify-center">
                     <i class="fas fa-times"></i>
                 </button>
@@ -191,11 +503,45 @@
         </div>
     </div>
 
+    <!-- Modal de Opções de Load do Firebase -->
+    <div id="load-options-modal" class="fixed inset-0 bg-black bg-opacity-60 z-[90] hidden flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6">
+            <h3 class="text-xl font-bold text-gray-800 mb-2 flex items-center">
+                <i class="fas fa-cloud-download-alt text-[#3b82f6] mr-2"></i> Opções de Carregamento
+            </h3>
+            <p class="text-sm text-gray-500 mb-6">De onde você deseja carregar os dados?</p>
+            
+            <div class="space-y-4 mb-6">
+                <button id="load-my-data" class="w-full bg-blue-50 hover:bg-blue-100 border-2 border-blue-200 text-blue-800 font-bold py-4 px-4 rounded-xl transition flex flex-col items-center justify-center gap-1 group">
+                    <span class="flex items-center gap-2 text-lg">
+                        <i class="fas fa-user-circle"></i> Meus Dados
+                    </span>
+                    <span class="text-xs font-normal opacity-80 group-hover:opacity-100 transition-opacity">Carrega o seu último preenchimento</span>
+                </button>
+                
+                <button id="load-global-data" class="w-full bg-gray-50 hover:bg-gray-100 border-2 border-gray-200 text-gray-800 font-bold py-4 px-4 rounded-xl transition flex flex-col items-center justify-center gap-1 group">
+                    <span class="flex items-center gap-2 text-lg">
+                        <i class="fas fa-globe"></i> Dados Globais
+                    </span>
+                    <span class="text-xs font-normal opacity-80 group-hover:opacity-100 transition-opacity">Carrega a última planilha enviada por alguém</span>
+                </button>
+            </div>
+            
+            <button id="cancel-load-options" class="w-full py-3 text-gray-500 font-bold rounded-xl hover:bg-gray-100 transition">Cancelar</button>
+        </div>
+    </div>
+
     <!-- Botão Flutuante Inferior -->
     <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-40">
-        <div class="max-w-md mx-auto">
-            <button id="generate-report" class="w-full bg-[#EE2E31] text-white font-bold py-3 rounded-xl shadow-lg hover:bg-red-700 active:scale-95 transition flex items-center justify-center gap-2">
-                <i class="fas fa-check-circle mr-2"></i> Gerar Relatório
+        <div class="max-w-md mx-auto flex gap-2">
+            <div class="flex items-center justify-center px-4 bg-gray-100 rounded-xl text-xs font-bold text-gray-500 whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]" id="user-display-name">
+                Offline
+            </div>
+            <button id="generate-report" class="flex-1 bg-[#EE2E31] text-white font-bold py-3 rounded-xl shadow-lg hover:bg-red-700 active:scale-95 transition flex items-center justify-center gap-2">
+                <i class="fas fa-check-circle mr-2"></i> Relatório (3 CDs)
+            </button>
+            <button id="logout-btn" class="w-12 bg-gray-200 text-gray-700 font-bold py-3 rounded-xl shadow-lg hover:bg-gray-300 active:scale-95 transition flex items-center justify-center" title="Sair">
+                <i class="fas fa-sign-out-alt"></i>
             </button>
         </div>
     </div>
@@ -203,128 +549,425 @@
     <script>
         const { jsPDF } = window.jspdf;
         
+        // Verificar se existe interface Android
+        const isAndroid = typeof Android !== 'undefined';
+        
+        // Configuração do Firebase
+        const firebaseConfig = {
+          apiKey: "AIzaSyBdNPXscs1-ikMOLGCzL5igJDi989RRCCQ",
+          authDomain: "checklist-94b12.firebaseapp.com",
+          databaseURL: "https://checklist-94b12-default-rtdb.firebaseio.com",
+          projectId: "checklist-94b12",
+          storageBucket: "checklist-94b12.firebasestorage.app",
+          messagingSenderId: "471194751883",
+          appId: "1:471194751883:web:b3ea0cad2212d5e0c6d58e",
+          measurementId: "G-KJBZ2F3ZZE"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const auth = firebase.auth();
+        const provider = new firebase.auth.GoogleAuthProvider();
+
+        let currentUser = null;
+
+        // Listener de Autenticação
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('auth-overlay').style.display = 'none';
+                document.getElementById('user-display-name').textContent = user.displayName?.split(' ')[0] || "Usuário";
+                document.getElementById('user-display-name').title = user.email;
+                showToast(`Bem-vindo(a), ${user.displayName?.split(' ')[0]}!`);
+            } else {
+                currentUser = null;
+                document.getElementById('auth-overlay').style.display = 'flex';
+                document.getElementById('user-display-name').textContent = "Offline";
+            }
+        });
+
+        // Trigger Google Login
+        document.getElementById('google-login-btn')?.addEventListener('click', () => {
+            auth.signInWithPopup(provider).catch((error) => {
+                console.error("Erro no login:", error);
+                alert("Erro ao fazer login: " + error.message);
+            });
+        });
+
+        // Trigger Logout
+        document.getElementById('logout-btn')?.addEventListener('click', () => {
+            if (confirm("Deseja realmente sair?")) {
+                auth.signOut().then(() => {
+                    // O onAuthStateChanged cuidará da UI
+                });
+            }
+        });
+
+        function saveToFirebase() {
+            if (!currentUser) return; // Não salva offline
+            
+            const inputs = {
+                rede: document.getElementById('rede').value,
+                id: document.getElementById('id-rede').value,
+                filial: document.getElementById('filial').value,
+                data: document.getElementById('data').value,
+                visitante: document.getElementById('visitante').value,
+                observacao: document.getElementById('observacao').value
+            };
+            
+            const stateToSave = {
+                inputs: inputs,
+                selectedProducts: selectedProducts,
+                customProducts: customProducts,
+                timestamp: new Date().toISOString(),
+                savedByUid: currentUser.uid,
+                savedByName: currentUser.displayName,
+                savedByEmail: currentUser.email
+            };
+            
+            // Salva na raiz do usuário (histórico pessoal)
+            database.ref(`users/${currentUser.uid}/lastState`).set(stateToSave)
+                .catch(error => console.error("Erro ao salvar no perfil Firebase:", error));
+                
+            // Salva na raiz global (histórico da frota/time)
+            database.ref('global/lastState').set(stateToSave)
+                .catch(error => console.error("Erro ao salvar no global Firebase:", error));
+        }
+
+        function loadFromFirebasePath(pathPath) {
+            if (!currentUser) return;
+            showToast('Lendo do banco de dados...');
+            
+            database.ref(pathPath).once('value').then((snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    if (data.inputs) {
+                        if (data.inputs.rede !== undefined) document.getElementById('rede').value = data.inputs.rede;
+                        if (data.inputs.id !== undefined) document.getElementById('id-rede').value = data.inputs.id;
+                        if (data.inputs.filial !== undefined) document.getElementById('filial').value = data.inputs.filial;
+                        if (data.inputs.data !== undefined) document.getElementById('data').value = data.inputs.data;
+                        if (data.inputs.visitante !== undefined) document.getElementById('visitante').value = data.inputs.visitante;
+                        if (data.inputs.observacao !== undefined) document.getElementById('observacao').value = data.inputs.observacao;
+                    }
+                    if (data.selectedProducts) {
+                        selectedProducts = data.selectedProducts;
+                        localStorage.setItem('selectedProducts', JSON.stringify(selectedProducts));
+                    } else {
+                        selectedProducts = {};
+                        localStorage.removeItem('selectedProducts');
+                    }
+                    if (data.customProducts) {
+                        customProducts = data.customProducts;
+                        localStorage.setItem('customProducts', JSON.stringify(customProducts));
+                    }
+                    renderCatalog();
+                    
+                    const timeString = new Date(data.timestamp).toLocaleString('pt-BR');
+                    const userName = data.savedByName ? data.savedByName.split(' ')[0] : 'Alguém';
+                    showToast(`Planilha de ${userName} carregada (${timeString})`);
+                } else {
+                    showToast('Nenhum dado encontrado nesse local.');
+                }
+            }).catch((error) => {
+                console.error("Erro ao carregar do Firebase:", error);
+                showToast('Erro de conexão ao carregar.');
+            });
+        }
+
+        // Abre modal de opções
+        function openLoadOptions() {
+            if (!currentUser) return alert("Faça login primeiro!");
+            document.getElementById('load-options-modal').classList.remove('hidden');
+        }
+
+        // Fecha modal de opções
+        function closeLoadOptions() {
+            document.getElementById('load-options-modal').classList.add('hidden');
+        }
+
         // Data atual automática
         const today = new Date();
+        
+        // Abrir relatório do Carrefour
+        document.getElementById('carrefour-logo').addEventListener('click', function() {
+            window.location.href = './carrefour.html';
+        });
         document.getElementById('data').valueAsDate = today;
 
-        // Lista de Produtos
-        const catalog = {
-            "Geladeiras": [
-                "BRM44HB",
-                "BRM44HK",
-                "BRO85AK",
-                "BRO85MK",
-                "BRE57FB",
-                "BRE57FK",
-                "BRE57FE",
-                "BRM55FK",
-                "BRM55FB",
-                "CMR53FK",
-                "CRM53FB",
-                "CRM53MB",
-                "CRM44MB",
-                "CRM44MK",
-                "BRM46MB",
-                "BRM46MK",
-                "BRM62AB",
-                "BRM62AK",
-                "BRM62AE",
-                "BRM66AB",
-                "BRM66AK",
-                "BRM52MB",
-                "BRM52MK",
-                "CRM40MB"
+        // Lista de Produtos Base com CÓDIGOS (COMPLETA)
+        const baseCatalog = {
+            Geladeiras: [
+                // BRASTEMP
+                { modelo: "BRM55FB", codigo: "5309131" },
+                { modelo: "BRM55FK", codigo: "5309174" },
+                { modelo: "BRM55FE", codigo: "5309158" },
+                { modelo: "BRM44HB", codigo: "4222342" },
+                { modelo: "BRM44HK", codigo: "4222369" },
+                { modelo: "BRM46MB", codigo: "5367425" },
+                { modelo: "BRM46MK", codigo: "5367417" },
+                { modelo: "BRE57FK", codigo: "5305942" },
+                { modelo: "BRE57FB", codigo: "5305985" },
+                { modelo: "BRE57FE", codigo: "5305969" },
+                { modelo: "BRE85AB", codigo: "5185033" },
+                { modelo: "BRE85AB", codigo: "5328446" },
+                { modelo: "BRE85AK", codigo: "5185050" },
+                { modelo: "BRE85AK", codigo: "5184827" },
+                { modelo: "BRO85AE", codigo: "5308720" },
+                { modelo: "BRE85MK", codigo: "5367255" },
+                { modelo: "BRE85MK", codigo: "5366747" },
+                { modelo: "BRO85ME", codigo: "5366763" },
+                { modelo: "BRO85AK", codigo: "5184827" },
+                { modelo: "BRO85AB", codigo: "5328446" },
+                { modelo: "BRO90AK", codigo: "4757602" },
+                { modelo: "BRM62AB", codigo: "5369240" },
+                { modelo: "BRM62AK", codigo: "5369258" },
+                { modelo: "BRM62AE", codigo: "5369231" },
+                { modelo: "BRE66AB", codigo: "5369274" },
+                { modelo: "BRE66AK", codigo: "5369282" },
+                { modelo: "BRE66AE", codigo: "5369266" },
+                { modelo: "BRM52MB", codigo: "5369193" },
+                { modelo: "BRM52MK", codigo: "5369215" },
+                // CONSUL
+                { modelo: "CRD37AE", codigo: "907090" },
+                { modelo: "CRM39AB", codigo: "4614330" },
+                { modelo: "CRM39AK", codigo: "4608305" },
+                { modelo: "CRM44AB", codigo: "5184860" },
+                { modelo: "CRM44AK", codigo: "5184843" },
+                { modelo: "CRM50LB", codigo: "5328330" },
+                { modelo: "CRM50LK", codigo: "5328357" },
+                { modelo: "CRM53FB", codigo: "5328314" },
+                { modelo: "CRM53FK", codigo: "5328292" },
+                { modelo: "CRM53MB", codigo: "5358213" },
+                { modelo: "CRM53MK", codigo: "5358221" },
+                { modelo: "CRM44MK", codigo: "5357012" },
+                { modelo: "CRM44MB", codigo: "5357020" },
+                { modelo: "CRM40MB", codigo: "5358248" },
+                { modelo: "CRM40MB", codigo: "5358264" }
             ],
-            "MWO": [
-                "CMS46AB",
-                "BMS46AB",
-                "BMS46AR",
-                "BMS20AR",
-                "CMO20BF"
+            Lavadora: [
+                // BRASTEMP
+                { modelo: "BWK13A9", codigo: "5287510" },
+                { modelo: "BWK13AB", codigo: "5287499" },
+                { modelo: "BWF15AB", codigo: "5296773" },
+                { modelo: "BWT15A9", codigo: "5308704" },
+                { modelo: "BWF18AB", codigo: "5338255" },
+                { modelo: "BWY16A9", codigo: "5341035" },
+                { modelo: "BWF14AB", codigo: "5361206" },
+                { modelo: "BWJ14A9", codigo: "5363829" },
+                // CONSUL
+                { modelo: "CWB09BB", codigo: "5185017" },
+                { modelo: "CWH12BB", codigo: "5212995" },
+                { modelo: "CWN15AB", codigo: "5313759" },
+                { modelo: "CWN13AB", codigo: "5332656" }
             ],
-            "Lavadora": [
-                "CWH12BB",
-                "CWN13AB",
-                "CWN15AB",
-                "BWK13AB",
-                "BWF15AB",
-                "BWT15A9",
-                "BWJ14AB",
-                "BWJ14A9",
-                "BWF14AB",
-                "BWF18AB",
-                "BWK17AB"
+            Fogao: [
+                // BRASTEMP
+                { modelo: "BFO4VBR", codigo: "5193443" },
+                { modelo: "BFO4EBB", codigo: "5193435" },
+                { modelo: "BFO4NBB", codigo: "5153360" },
+                { modelo: "BFO4NBR", codigo: "5153352" },
+                { modelo: "BFO4VAE", codigo: "5122708" },
+                { modelo: "BFS5VCE", codigo: "4616766" },
+                { modelo: "BFS5NCR", codigo: "4222288" },
+                { modelo: "BFS5NDB", codigo: "5313040" },
+                { modelo: "BFS5XAR", codigo: "5313970" },
+                { modelo: "BFS5LAP", codigo: "5328411" },
+                // CONSUL
+                { modelo: "CFO4VBE", codigo: "5286336" },
+                { modelo: "CFO4NAB", codigo: "908576" },
+                { modelo: "CFO4NAR", codigo: "908584" },
+                { modelo: "CFO4VAR", codigo: "908657" },
+                { modelo: "CFO4VCE", codigo: "5360919" },
+                { modelo: "CFO4ZAB", codigo: "5360927" },
+                { modelo: "CFO4ZAE", codigo: "5360935" },
+                { modelo: "CFS5NAB", codigo: "3957950" },
+                { modelo: "CFS5VAR", codigo: "3989283" },
+                { modelo: "CFS5VAE", codigo: "4889703" },
+                { modelo: "CFS5VBE", codigo: "5334233" }
             ],
-            "Fogão": [
-                "CFO4NAB",
-                "BFO4NBB",
-                "BFS5NDB",
-                "CFS5VAR",
-                "CFO4NAR"
-            ]
+            Cooktop: [
+                // BRASTEMP
+                { modelo: "BDD86AP", codigo: "5328420" },
+                { modelo: "BDD75BE", codigo: "5364957" },
+                { modelo: "BDD61BE", codigo: "5364949" },
+                { modelo: "BDS62AE", codigo: "5364965" },
+                { modelo: "BDS85AE", codigo: "5364981" },
+                { modelo: "BDD75AE", codigo: "5364973" },
+                { modelo: "BDD75AE", codigo: "619108" },
+                { modelo: "BDD61AE", codigo: "619094" },
+                // CONSUL
+                { modelo: "CD075AE", codigo: "907022" },
+                { modelo: "CD060AE", codigo: "6343" },
+                { modelo: "CD075BE", codigo: "5364990" },
+                { modelo: "CDS75AE", codigo: "5365007" }
+            ],
+            MWO: [
+                // BRASTEMP
+                { modelo: "BMS46AB", codigo: "5056357" },
+                { modelo: "BMS46AR", codigo: "5056373" },
+                // CONSUL
+                { modelo: "CMS46AB", codigo: "5056411" },
+                { modelo: "CMS45AB", codigo: "4044290" },
+                { modelo: "CMO20BF", codigo: "SEM CADASTRO" }
+            ],
+            Freezer: [
+                // CONSUL
+                { modelo: "CVU18MB", codigo: "5369827" },
+                { modelo: "CVU20MB", codigo: "5369843" },
+                { modelo: "CVU26MB", codigo: "5369860" },
+                { modelo: "CVU30MB", codigo: "5369886" },
+                { modelo: "CHA31FB", codigo: "5147050" },
+                { modelo: "CHA14AB", codigo: "5344905" },
+                { modelo: "CHB53EB", codigo: "4088352" }
+            ],
+            Outros: []
         };
+
+        // Carregar produtos personalizados do localStorage
+        let customProducts = JSON.parse(localStorage.getItem('customProducts') || '{}');
+
+        // Mesclar catálogo base com produtos personalizados
+        function getFullCatalog() {
+            const fullCatalog = JSON.parse(JSON.stringify(baseCatalog));
+            
+            // Adicionar produtos personalizados
+            Object.entries(customProducts).forEach(([key, value]) => {
+                const [category, productCode] = key.split('-');
+                if (category && productCode) {
+                    if (!fullCatalog[category]) {
+                        fullCatalog[category] = [];
+                    }
+                    // Verificar se já existe
+                    const exists = fullCatalog[category].some(p => p.modelo === productCode);
+                    if (!exists) {
+                        fullCatalog[category].push({ 
+                            modelo: productCode, 
+                            codigo: value.codigo || "SEM CADASTRO" 
+                        });
+                    }
+                }
+            });
+            
+            return fullCatalog;
+        }
 
         // Ícones por categoria
         const icons = {
             "Geladeiras": "fa-snowflake",
-            "MWO": "fa-box-open",
             "Lavadora": "fa-tshirt",
-            "Fogão": "fa-fire"
+            "Fogão": "fa-fire",
+            "Cooktop": "fa-chevron-circle-right",
+            "MWO": "fa-box-open",
+            "Freezer": "fa-temperature-low",
+            "Outros": "fa-tag"
         };
 
-        // Estado dos produtos selecionados com quantidades
+        // Estado dos produtos - AGORA COM ESTRUTURA PARA 3 CDs
         let selectedProducts = {};
 
-        // Variáveis para o modal de quantidade
+        // Variáveis para os modais
         let currentProduct = null;
         let currentCategory = null;
         let currentButton = null;
+        let editingProductId = null;
+
+        // Função para mostrar toast
+        function showToast(message, duration = 3000) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.remove('hidden');
+            
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, duration);
+        }
+
+        // Função para calcular total de um produto
+        function getTotalQuantity(productData) {
+            if (!productData) return 0;
+            if (productData.indisponivel) return 0;
+            const cd = productData.cd || {};
+            return (cd.rj1401 || 0) + (cd.sp1200 || 0) + (cd.sp1500 || 0);
+        }
 
         // Função para renderizar o catálogo
         function renderCatalog() {
             const container = document.getElementById('products-container');
             container.innerHTML = '';
 
-            for (const [category, products] of Object.entries(catalog)) {
-                // Criação do card da categoria
+            const fullCatalog = getFullCatalog();
+            const categoriasOrdenadas = ["Geladeiras", "Lavadora", "Fogão", "Cooktop", "MWO", "Freezer", "Outros"];
+
+            for (const category of categoriasOrdenadas) {
+                const products = fullCatalog[category] || [];
+                if (products.length === 0 && category !== "Outros") continue;
+                
                 const section = document.createElement('div');
                 section.className = "bg-white p-4 rounded-2xl shadow-sm animate-fade-in";
                 
                 const header = document.createElement('h3');
                 header.className = "text-[#EE2E31] font-bold text-lg mb-3 flex items-center border-b pb-2";
-                header.innerHTML = `<i class="fas ${icons[category] || 'fa-tag'} mr-2 text-sm opacity-70"></i> ${category}`;
+                header.innerHTML = `<i class="fas ${icons[category] || 'fa-tag'} mr-2 text-sm opacity-70"></i> ${category} (${products.length})`;
                 section.appendChild(header);
 
-                // Grid de produtos
                 const grid = document.createElement('div');
                 grid.className = "grid grid-cols-2 sm:grid-cols-3 gap-2";
 
-                products.forEach(prod => {
-                    const productId = `${category}-${prod}`;
+                products.sort((a, b) => a.modelo.localeCompare(b.modelo)).forEach(prod => {
+                    const productId = `${category}-${prod.modelo}`;
                     const btn = document.createElement('button');
-                    // Estilo base
-                    btn.className = "product-item text-left p-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-600 text-xs sm:text-sm font-medium flex items-center justify-between group relative";
-                    btn.dataset.product = prod;
-                    btn.dataset.category = category;
-                    btn.dataset.productId = productId;
                     
-                    // Verificar se já existe quantidade para este produto
-                    const hasQuantity = selectedProducts[productId] && selectedProducts[productId].quantity > 0;
+                    // Determinar classe baseada no estado
+                    let baseClass = "product-item text-left p-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-600 text-xs sm:text-sm font-medium flex items-center justify-between group relative";
                     
-                    btn.innerHTML = `
-                        <span class="truncate pr-2">${prod}</span>
-                        <i class="fas ${hasQuantity ? 'fa-check-circle text-[#EE2E31]' : 'fa-plus-circle text-gray-300'} transition-colors group-hover:text-red-300"></i>
-                        ${hasQuantity ? `<span class="quantity-badge">${selectedProducts[productId].quantity}</span>` : ''}
-                    `;
+                    const productData = selectedProducts[productId];
+                    const totalQty = getTotalQuantity(productData);
                     
-                    if (hasQuantity) {
-                        btn.classList.add('selected');
+                    if (productData) {
+                        if (productData.indisponivel) {
+                            baseClass = baseClass.replace('product-item', 'product-item indisponivel');
+                        } else if (totalQty > 0) {
+                            baseClass = baseClass.replace('product-item', 'product-item selected');
+                        }
                     }
                     
-                    // Evento de Click
+                    btn.className = baseClass;
+                    btn.dataset.product = prod.modelo;
+                    btn.dataset.category = category;
+                    btn.dataset.codigo = prod.codigo || "SEM CÓDIGO";
+                    btn.dataset.productId = productId;
+                    
+                    // Determinar ícone e badge
+                    let icon = 'fa-plus-circle text-gray-300';
+                    let badge = '';
+                    
+                    if (productData) {
+                        if (productData.indisponivel) {
+                            icon = 'fa-times-circle text-white';
+                            badge = `<span class="indisponivel-badge">IND</span>`;
+                        } else if (totalQty > 0) {
+                            icon = 'fa-check-circle text-white';
+                            badge = `<span class="quantity-badge">${totalQty}</span>`;
+                        }
+                    }
+                    
+                    btn.innerHTML = `
+                        <span class="truncate pr-2" title="${prod.modelo} (Cód: ${prod.codigo || 'SEM CÓDIGO'})">${prod.modelo}</span>
+                        <i class="fas ${icon} transition-colors"></i>
+                        ${badge}
+                    `;
+                    
+                    // Clique simples - abrir modal de quantidade
                     btn.onclick = (e) => {
                         e.preventDefault();
-                        openQuantityModal(btn, category, prod);
+                        openQuantityModal(btn, category, prod.modelo);
+                    };
+                    
+                    // Duplo clique - abrir modal de edição
+                    btn.ondblclick = (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        openEditModal(productId);
                     };
 
                     grid.appendChild(btn);
@@ -335,6 +978,24 @@
             }
         }
 
+        // Abrir modal de edição
+        function openEditModal(productId) {
+            const product = selectedProducts[productId];
+            if (!product) return;
+            
+            editingProductId = productId;
+            
+            document.getElementById('edit-product-name').textContent = `${product.product} - ${product.category}`;
+            document.getElementById('edit-product-code').textContent = `Código: ${getProductCode(product.category, product.product)}`;
+            
+            const cd = product.cd || {};
+            document.getElementById('edit-cd-rj1401').value = cd.rj1401 || 0;
+            document.getElementById('edit-cd-sp1200').value = cd.sp1200 || 0;
+            document.getElementById('edit-cd-sp1500').value = cd.sp1500 || 0;
+            
+            document.getElementById('edit-quantity-modal').classList.remove('hidden');
+        }
+
         // Abrir modal de quantidade
         function openQuantityModal(btn, category, product) {
             currentButton = btn;
@@ -342,10 +1003,16 @@
             currentProduct = product;
             
             const productId = `${category}-${product}`;
-            const currentQty = selectedProducts[productId]?.quantity || 1;
+            const currentData = selectedProducts[productId] || {};
             
             document.getElementById('modal-product-name').textContent = product;
-            document.getElementById('product-quantity').value = currentQty;
+            document.getElementById('modal-product-category').textContent = `Categoria: ${category}`;
+            document.getElementById('modal-product-code').textContent = btn.dataset.codigo || "SEM CÓDIGO";
+            
+            const cd = currentData.cd || {};
+            document.getElementById('cd-rj1401').value = currentData.indisponivel ? 0 : (cd.rj1401 || 0);
+            document.getElementById('cd-sp1200').value = currentData.indisponivel ? 0 : (cd.sp1200 || 0);
+            document.getElementById('cd-sp1500').value = currentData.indisponivel ? 0 : (cd.sp1500 || 0);
             
             document.getElementById('quantity-modal').classList.add('active');
         }
@@ -358,309 +1025,667 @@
             currentButton = null;
         }
 
-        // Atualizar visual do botão após selecionar quantidade
-        function updateButtonVisual(btn, category, product, quantity) {
-            const productId = `${category}-${product}`;
+        // Fechar modal de edição
+        function closeEditModal() {
+            document.getElementById('edit-quantity-modal').classList.add('hidden');
+            editingProductId = null;
+        }
+
+        // Marcar como indisponível
+        function setIndisponivel() {
+            if (currentProduct && currentCategory && currentButton) {
+                const productId = `${currentCategory}-${currentProduct}`;
+                
+                selectedProducts[productId] = {
+                    product: currentProduct,
+                    category: currentCategory,
+                    cd: { rj1401: 0, sp1200: 0, sp1500: 0 },
+                    indisponivel: true,
+                    codigo: currentButton.dataset.codigo
+                };
+                
+                // Atualizar visual
+                updateButtonVisual(currentButton, productId);
+                
+                // Salvar estado
+                saveState();
+            }
             
-            if (quantity > 0) {
-                btn.classList.add('selected');
-                const icon = btn.querySelector('i');
-                icon.className = "fas fa-check-circle text-white";
+            closeQuantityModal();
+        }
+
+        // Atualizar visual do botão
+        function updateButtonVisual(btn, productId) {
+            const productData = selectedProducts[productId];
+            
+            btn.classList.remove('selected', 'indisponivel');
+            
+            const oldBadge = btn.querySelector('.quantity-badge, .indisponivel-badge');
+            if (oldBadge) oldBadge.remove();
+            
+            if (productData?.indisponivel) {
+                btn.classList.add('indisponivel');
+                btn.querySelector('i').className = "fas fa-times-circle text-white";
                 
-                // Adicionar ou atualizar badge de quantidade
-                let badge = btn.querySelector('.quantity-badge');
-                if (!badge) {
-                    badge = document.createElement('span');
-                    badge.className = 'quantity-badge';
-                    btn.appendChild(badge);
-                }
-                badge.textContent = quantity;
+                const badge = document.createElement('span');
+                badge.className = 'indisponivel-badge';
+                badge.textContent = 'IND';
+                btn.appendChild(badge);
             } else {
-                btn.classList.remove('selected');
-                const icon = btn.querySelector('i');
-                icon.className = "fas fa-plus-circle text-gray-300 transition-colors group-hover:text-red-300";
-                
-                // Remover badge se existir
-                const badge = btn.querySelector('.quantity-badge');
-                if (badge) {
-                    badge.remove();
-                }
-                
-                // Remover do estado se quantidade for zero
-                if (selectedProducts[productId]) {
-                    delete selectedProducts[productId];
+                const total = getTotalQuantity(productData);
+                if (total > 0) {
+                    btn.classList.add('selected');
+                    btn.querySelector('i').className = "fas fa-check-circle text-white";
+                    
+                    const badge = document.createElement('span');
+                    badge.className = 'quantity-badge';
+                    badge.textContent = total;
+                    btn.appendChild(badge);
+                } else {
+                    btn.querySelector('i').className = "fas fa-plus-circle text-gray-300 transition-colors group-hover:text-red-300";
                 }
             }
         }
 
-        // Função para gerar texto do relatório com quantidades
-        function generateTextReport(inputs, selectedData) {
-            let text = `*Mix Brastemp Na Rede:*\n\n`;
+        // Salvar estado no localStorage
+        function saveState() {
+            localStorage.setItem('selectedProducts', JSON.stringify(selectedProducts));
+            if (typeof saveToFirebase === 'function') saveToFirebase();
+        }
+
+        // Carregar estado do localStorage
+        function loadState() {
+            const saved = localStorage.getItem('selectedProducts');
+            if (saved) {
+                selectedProducts = JSON.parse(saved);
+                // Migrar dados antigos para nova estrutura se necessário
+                Object.values(selectedProducts).forEach(item => {
+                    if (item.quantity !== undefined && !item.cd) {
+                        // Converter formato antigo para novo
+                        item.cd = {
+                            rj1401: item.quantity || 0,
+                            sp1200: 0,
+                            sp1500: 0
+                        };
+                        delete item.quantity;
+                    }
+                });
+            }
+        }
+
+        // Função para obter código do produto
+        function getProductCode(category, product) {
+            const fullCatalog = getFullCatalog();
+            const catProducts = fullCatalog[category] || [];
+            const found = catProducts.find(p => p.modelo === product);
+            return found && found.codigo ? found.codigo : "SEM CÓDIGO";
+        }
+
+        // Função para gerar texto do relatório
+        function generateTextReport(inputs, selectedData, observacao) {
+            let text = `*MIX BRASTEMP/CONSUL - RELATÓRIO 3 CDs*\n\n`;
             text += `*Rede:* ${inputs.rede}\n`;
-            text += `*ID:* ${inputs.id}\n`;
+            text += `*ID Loja:* ${inputs.id}\n`;
             text += `*Filial:* ${inputs.filial}\n`;
-            text += `*Data:* ${inputs.data}\n\n`;
+            text += `*Data:* ${inputs.data}\n`;
+            text += `*Visitante:* ${inputs.visitante}\n\n`;
 
-            text += `*PRODUTOS DISPONÍVEIS NO CD:*\n\n`;
+            text += `*PRODUTOS POR CD:*\n\n`;
 
-            const order = ["Geladeiras", "MWO", "Lavadora", "Fogão"];
+            const order = ["Geladeiras", "Lavadora", "Fogão", "Cooktop", "MWO", "Freezer", "Outros"];
             let hasItems = false;
 
             order.forEach(cat => {
-                const catProducts = Object.entries(selectedData).filter(([key, value]) => key.startsWith(cat));
+                const catProducts = Object.entries(selectedData)
+                    .filter(([key, value]) => key.startsWith(cat) && !value.indisponivel)
+                    .sort((a, b) => a[1].product.localeCompare(b[1].product));
                 
                 if (catProducts.length > 0) {
                     hasItems = true;
-                    text += `*${cat}:*\n`;
+                    text += `*${cat.toUpperCase()}:*\n`;
                     
                     catProducts.forEach(([key, data]) => {
-                        text += `  • ${data.product}: ${data.quantity} unidade(s)\n`;
+                        const codigo = getProductCode(data.category, data.product);
+                        const cd = data.cd || {};
+                        text += `  • ${data.product} (Cód: ${codigo}): `;
+                        text += `RJ:${cd.rj1401||0}  SP1200:${cd.sp1200||0}  SP1500:${cd.sp1500||0}\n`;
                     });
                     text += `\n`;
                 }
             });
 
-            if (!hasItems) {
-                text += "_Nenhum produto selecionado._";
+            // Indisponíveis
+            const indisponiveis = Object.values(selectedData).filter(item => item.indisponivel);
+            if (indisponiveis.length > 0) {
+                text += `*INDISPONÍVEIS:*\n`;
+                indisponiveis.forEach(item => {
+                    text += `  • ${item.product} (Cód: ${item.codigo})\n`;
+                });
+                text += `\n`;
             }
+
+            if (!hasItems && indisponiveis.length === 0) {
+                text += "_Nenhum produto selecionado._\n\n";
+            }
+
+            // Totais
+            const totalItens = Object.keys(selectedData).length;
+            const totalIndisponiveis = indisponiveis.length;
+            const totalDisponiveis = totalItens - totalIndisponiveis;
+            
+            // Calcular totais por CD
+            let totalRJ = 0, totalSP1200 = 0, totalSP1500 = 0;
+            Object.values(selectedData).forEach(item => {
+                if (!item.indisponivel) {
+                    const cd = item.cd || {};
+                    totalRJ += cd.rj1401 || 0;
+                    totalSP1200 += cd.sp1200 || 0;
+                    totalSP1500 += cd.sp1500 || 0;
+                }
+            });
+            const totalGeral = totalRJ + totalSP1200 + totalSP1500;
+
+            text += `*RESUMO:*\n`;
+            text += `  • Total de SKUs: ${totalItens}\n`;
+            text += `  • Disponíveis: ${totalDisponiveis}\n`;
+            text += `  • Indisponíveis: ${totalIndisponiveis}\n`;
+            text += `  • Total RJ1401: ${totalRJ} unidades\n`;
+            text += `  • Total SP1200: ${totalSP1200} unidades\n`;
+            text += `  • Total SP1500: ${totalSP1500} unidades\n`;
+            text += `  • TOTAL GERAL: ${totalGeral} unidades\n\n`;
+
+            text += `*OBSERVAÇÕES:*\n`;
+            text += observacao && observacao.trim() !== '' ? observacao : "Sem observações adicionais.";
 
             return text;
         }
 
-        // Função para gerar Excel bem organizado
-        function generateExcel(inputs, selectedData) {
-            // Criar workbook
-            const wb = XLSX.utils.book_new();
-            
-            // Dados para a planilha
-            const worksheetData = [];
-            
-            // Título principal
-            worksheetData.push(['RELATÓRIO MIX BRASTEMP']);
-            worksheetData.push([]);
-            
-            // Dados da Loja
-            worksheetData.push(['DADOS DA LOJA']);
-            worksheetData.push(['Rede:', inputs.rede]);
-            worksheetData.push(['ID Loja:', inputs.id]);
-            worksheetData.push(['Filial:', inputs.filial]);
-            worksheetData.push(['Data:', inputs.data]);
-            worksheetData.push([]);
-            
-            // Cabeçalho da tabela de produtos
-            worksheetData.push(['PRODUTOS DISPONÍVEIS NO CD']);
-            worksheetData.push(['Categoria', 'Produto', 'Quantidade']);
-            
-            // Ordem das categorias
-            const order = ["Geladeiras", "MWO", "Lavadora", "Fogão"];
-            let hasItems = false;
-            
-            order.forEach(cat => {
-                const catProducts = Object.entries(selectedData).filter(([key, value]) => key.startsWith(cat));
-                
-                if (catProducts.length > 0) {
-                    hasItems = true;
-                    
-                    // Adicionar linha em branco antes de cada categoria (exceto primeira)
-                    if (catProducts.length > 0) {
-                        // Não adicionar linha extra
-                    }
-                    
-                    catProducts.forEach(([key, data], index) => {
-                        worksheetData.push([
-                            index === 0 ? cat : '', // Mostrar categoria apenas no primeiro item
-                            data.product,
-                            data.quantity
-                        ]);
-                    });
-                    
-                    // Adicionar subtotal por categoria
-                    const subtotal = catProducts.reduce((sum, [key, data]) => sum + data.quantity, 0);
-                    worksheetData.push(['', 'Subtotal:', subtotal]);
-                    worksheetData.push([]);
-                }
-            });
-            
-            if (!hasItems) {
-                worksheetData.push(['Nenhum produto selecionado']);
-            }
-            
-            // Adicionar total geral
-            if (hasItems) {
-                const totalGeral = Object.values(selectedData).reduce((sum, item) => sum + item.quantity, 0);
-                worksheetData.push([]);
-                worksheetData.push(['', 'TOTAL GERAL:', totalGeral]);
-            }
-            
-            // Rodapé
-            worksheetData.push([]);
-            worksheetData.push([`Relatório gerado em ${new Date().toLocaleString('pt-BR')}`]);
-            
-            // Criar worksheet
-            const ws = XLSX.utils.aoa_to_sheet(worksheetData);
-            
-            // Ajustar largura das colunas
-            ws['!cols'] = [
-                { wch: 20 }, // Categoria
-                { wch: 15 }, // Produto
-                { wch: 12 }  // Quantidade
-            ];
-            
-            // Adicionar worksheet ao workbook
-            XLSX.utils.book_append_sheet(wb, ws, 'Mix Brastemp');
-            
-            // Salvar arquivo
-            const fileName = `Mix_Brastemp_${inputs.rede || 'Loja'}_${inputs.data.replace(/\//g, '-')}.xlsx`;
-            XLSX.writeFile(wb, fileName);
-        }
-
-        // Gerar PDF com quantidades
-        function generatePDF(inputs, selectedData) {
-            const doc = new jsPDF();
-            const pageWidth = doc.internal.pageSize.width;
-            
-            // Header Vermelho Brastemp
-            doc.setFillColor(238, 46, 49); 
-            doc.rect(0, 0, pageWidth, 25, 'F');
-            
-            doc.setTextColor(255, 255, 255);
-            doc.setFontSize(16);
-            doc.setFont("helvetica", "bold");
-            doc.text("Checklist Mix Brastemp", 15, 16);
-
-            // Informações da Loja
-            let y = 35;
-            doc.setTextColor(0, 0, 0);
-            doc.setFontSize(10);
-            doc.setFont("helvetica", "bold");
-            doc.text("DADOS DA VISITA", 15, y);
-            doc.setDrawColor(200);
-            doc.line(15, y+2, pageWidth-15, y+2);
-            
-            y += 8;
-            doc.setFont("helvetica", "normal");
-            doc.text(`Rede: ${inputs.rede}`, 15, y);
-            doc.text(`Filial: ${inputs.filial}`, 15, y+5);
-            
-            doc.text(`ID: ${inputs.id}`, 110, y);
-            doc.text(`Data: ${inputs.data}`, 110, y+5);
-
-            y += 15;
-
-            // Lista de Produtos
-            doc.setFont("helvetica", "bold");
-            doc.text("PRODUTOS DISPONÍVEIS NO CD", 15, y);
-            doc.line(15, y+2, pageWidth-15, y+2);
-            y += 10;
-
-            const order = ["Geladeiras", "MWO", "Lavadora", "Fogão"];
-            let hasItems = false;
-
-            order.forEach(cat => {
-                const catProducts = Object.entries(selectedData).filter(([key, value]) => key.startsWith(cat));
-                
-                if (catProducts.length > 0) {
-                    hasItems = true;
-                    
-                    // Verifica quebra de página
-                    if (y > 270) {
-                        doc.addPage();
-                        y = 20;
-                    }
-
-                    // Título Categoria
-                    doc.setFont("helvetica", "bold");
-                    doc.setFillColor(240, 240, 240);
-                    doc.rect(15, y-4, pageWidth-30, 6, 'F');
-                    doc.setTextColor(238, 46, 49);
-                    doc.text(cat.toUpperCase(), 18, y);
-                    
-                    y += 6;
-                    doc.setTextColor(0, 0, 0);
-                    doc.setFont("helvetica", "normal");
-                    
-                    // Itens com quantidade
-                    catProducts.forEach(([key, data]) => {
-                        if (y > 280) {
-                            doc.addPage();
-                            y = 20;
-                        }
-                        
-                        doc.text(`• ${data.product}: ${data.quantity} unidade(s)`, 20, y);
-                        y += 5;
-                    });
-                    
-                    // Subtotal da categoria
-                    const subtotal = catProducts.reduce((sum, [key, data]) => sum + data.quantity, 0);
-                    doc.setFont("helvetica", "bold");
-                    doc.text(`Subtotal: ${subtotal} unidades`, 20, y);
-                    doc.setFont("helvetica", "normal");
-                    y += 8;
-                }
-            });
-
-            if (!hasItems) {
-                doc.setFont("helvetica", "italic");
-                doc.text("Nenhum produto foi selecionado nesta visita.", 15, y);
-            } else {
-                // Total geral
-                const totalGeral = Object.values(selectedData).reduce((sum, item) => sum + item.quantity, 0);
-                y += 2;
-                doc.setFont("helvetica", "bold");
-                doc.text(`TOTAL GERAL: ${totalGeral} unidades`, 15, y);
-            }
-
-            // Rodapé
-            doc.setFontSize(8);
-            doc.setTextColor(150);
-            doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')}`, pageWidth/2, 290, { align: 'center' });
-
-            doc.save(`Mix_Brastemp_${inputs.rede || 'Loja'}.pdf`);
-        }
-
-        // Formatar Data para exibição
+        // Função para formatar data
         function formatDate(dateStr) {
             if (!dateStr) return "";
             const [year, month, day] = dateStr.split('-');
             return `${day}/${month}/${year}`;
         }
 
-        // Obter dados selecionados
-        function getSelectedData() {
-            return selectedProducts;
+        // Função para criar célula com estilo (Excel)
+        function cell(value, options = {}) {
+            const borderStyle = {
+                top: { style: 'thin', color: { rgb: '000000' } },
+                bottom: { style: 'thin', color: { rgb: '000000' } },
+                left: { style: 'thin', color: { rgb: '000000' } },
+                right: { style: 'thin', color: { rgb: '000000' } }
+            };
+            
+            const cellObj = {
+                t: typeof value === 'number' ? 'n' : 's',
+                v: value,
+                s: {
+                    border: borderStyle,
+                    alignment: {
+                        vertical: 'center',
+                        horizontal: options.align || 'center',
+                        wrapText: options.wrap || false
+                    }
+                }
+            };
+            
+            if (options.bold) {
+                cellObj.s.font = { bold: true };
+            }
+            
+            if (options.fill) {
+                cellObj.s.fill = { fgColor: { rgb: options.fill } };
+            }
+            
+            if (options.fontSize) {
+                if (!cellObj.s.font) cellObj.s.font = {};
+                cellObj.s.font.sz = options.fontSize;
+            }
+            
+            return cellObj;
+        }
+
+        // Função para exportar Excel com estilo
+        function generateStyledExcel() {
+            const inputs = {
+                rede: document.getElementById('rede').value || "Não informada",
+                id: document.getElementById('id-rede').value || "-",
+                filial: document.getElementById('filial').value || "-",
+                data: formatDate(document.getElementById('data').value),
+                visitante: document.getElementById('visitante').value || "-",
+                obs: document.getElementById('observacao').value || "Sem observações adicionais."
+            };
+            
+            // Criar workbook
+            const wb = XLSX.utils.book_new();
+            
+            // Array para armazenar as linhas
+            const rows = [];
+            
+            // TÍTULO PRINCIPAL
+            rows.push([
+                cell('RELATÓRIO DE MIX - 3 CDs (RJ1401, SP1200, SP1500)', { bold: true, fontSize: 14, align: 'center' }),
+                cell(''), cell(''), cell(''), cell(''), cell(''), cell(''), cell('')
+            ]);
+            
+            // LINHA VAZIA
+            rows.push([cell(''), cell(''), cell(''), cell(''), cell(''), cell(''), cell(''), cell('')]);
+            
+            // INFORMAÇÕES DA UNIDADE
+            rows.push([
+                cell('INFORMAÇÕES DA UNIDADE', { bold: true, fontSize: 12, align: 'center' }),
+                cell(''), cell(''), cell(''), cell(''), cell(''), cell(''), cell('')
+            ]);
+            
+            // REDE, DATA E VISITANTE
+            rows.push([
+                cell('Rede:', { bold: true }),
+                cell(inputs.rede, { bold: true }),
+                cell(''),
+                cell('Data da Visita:', { bold: true }),
+                cell(inputs.data, { bold: true }),
+                cell(''),
+                cell(''),
+                cell('')
+            ]);
+            
+            // ID, FILIAL
+            rows.push([
+                cell('ID Loja:', { bold: true }),
+                cell(inputs.id, { bold: true }),
+                cell(''),
+                cell('Filial:', { bold: true }),
+                cell(inputs.filial, { bold: true }),
+                cell(''),
+                cell(''),
+                cell('')
+            ]);
+            
+            // VISITANTE
+            rows.push([
+                cell('Visitante:', { bold: true }),
+                cell(inputs.visitante, { bold: true }),
+                cell(''), cell(''), cell(''), cell(''), cell(''), cell('')
+            ]);
+            
+            // LINHA VAZIA
+            rows.push([cell(''), cell(''), cell(''), cell(''), cell(''), cell(''), cell(''), cell('')]);
+            
+            // CABEÇALHO DA TABELA
+            rows.push([
+                cell('CATEGORIA', { bold: true, fill: 'F2F2F2' }),
+                cell('MODELO', { bold: true, fill: 'F2F2F2' }),
+                cell('CÓDIGO SAP', { bold: true, fill: 'F2F2F2' }),
+                cell('RJ1401', { bold: true, fill: 'F2F2F2' }),
+                cell('SP1200', { bold: true, fill: 'F2F2F2' }),
+                cell('SP1500', { bold: true, fill: 'F2F2F2' }),
+                cell('TOTAL', { bold: true, fill: 'F2F2F2' }),
+                cell('STATUS', { bold: true, fill: 'F2F2F2' })
+            ]);
+            
+            // CATEGORIAS
+            const categoriasOrdem = ["Geladeiras", "Lavadora", "Fogão", "Cooktop", "MWO", "Freezer", "Outros"];
+            
+            categoriasOrdem.forEach(cat => {
+                const itens = Object.values(selectedProducts)
+                    .filter(p => p.category === cat)
+                    .sort((a, b) => a.product.localeCompare(b.product));
+                
+                if (itens.length > 0) {
+                    // PRODUTOS
+                    itens.forEach((item, index) => {
+                        if (item.indisponivel) {
+                            rows.push([
+                                cell(index === 0 ? cat.toUpperCase() : ''),
+                                cell(item.product),
+                                cell(item.codigo || ''),
+                                cell(0),
+                                cell(0),
+                                cell(0),
+                                cell(0),
+                                cell('INDISPONÍVEL', { fill: 'FFE5E5' })
+                            ]);
+                        } else {
+                            const cd = item.cd || {};
+                            const total = (cd.rj1401||0) + (cd.sp1200||0) + (cd.sp1500||0);
+                            const situacao = total < 2 ? 'ATENÇÃO' : 'OK';
+                            const fillColor = total < 2 ? 'FFF2CC' : 'E5F5E5';
+                            
+                            rows.push([
+                                cell(index === 0 ? cat.toUpperCase() : ''),
+                                cell(item.product),
+                                cell(item.codigo || ''),
+                                cell(cd.rj1401 || 0),
+                                cell(cd.sp1200 || 0),
+                                cell(cd.sp1500 || 0),
+                                cell(total, { bold: true }),
+                                cell(situacao, { fill: fillColor })
+                            ]);
+                        }
+                    });
+                    
+                    // SUBTOTAL DA CATEGORIA
+                    const subtotalRJ = itens.reduce((sum, item) => sum + (item.indisponivel ? 0 : (item.cd?.rj1401 || 0)), 0);
+                    const subtotalSP1200 = itens.reduce((sum, item) => sum + (item.indisponivel ? 0 : (item.cd?.sp1200 || 0)), 0);
+                    const subtotalSP1500 = itens.reduce((sum, item) => sum + (item.indisponivel ? 0 : (item.cd?.sp1500 || 0)), 0);
+                    const subtotalGeral = subtotalRJ + subtotalSP1200 + subtotalSP1500;
+                    const totalItens = itens.length;
+                    const indisponiveis = itens.filter(item => item.indisponivel).length;
+                    
+                    rows.push([
+                        cell('SUBTOTAL DA CATEGORIA:', { bold: true }),
+                        cell(''),
+                        cell(''),
+                        cell(subtotalRJ, { bold: true }),
+                        cell(subtotalSP1200, { bold: true }),
+                        cell(subtotalSP1500, { bold: true }),
+                        cell(subtotalGeral, { bold: true }),
+                        cell(`Itens: ${totalItens} | IND: ${indisponiveis}`, { bold: true })
+                    ]);
+                    
+                    // LINHA EM BRANCO APÓS CATEGORIA
+                    rows.push([cell(''), cell(''), cell(''), cell(''), cell(''), cell(''), cell(''), cell('')]);
+                }
+            });
+            
+            // TOTAIS GERAIS
+            let totalRJ = 0, totalSP1200 = 0, totalSP1500 = 0;
+            Object.values(selectedProducts).forEach(item => {
+                if (!item.indisponivel) {
+                    const cd = item.cd || {};
+                    totalRJ += cd.rj1401 || 0;
+                    totalSP1200 += cd.sp1200 || 0;
+                    totalSP1500 += cd.sp1500 || 0;
+                }
+            });
+            const totalGeral = totalRJ + totalSP1200 + totalSP1500;
+            const totalItensGeral = Object.keys(selectedProducts).length;
+            const totalIndisponiveis = Object.values(selectedProducts).filter(item => item.indisponivel).length;
+            
+            rows.push([
+                cell('TOTAIS GERAIS', { bold: true, fontSize: 12 }),
+                cell(''), cell(''), cell(''), cell(''), cell(''), cell(''), cell('')
+            ]);
+            
+            rows.push([
+                cell('Total por CD:', { bold: true }),
+                cell(''),
+                cell(''),
+                cell(totalRJ, { bold: true }),
+                cell(totalSP1200, { bold: true }),
+                cell(totalSP1500, { bold: true }),
+                cell(totalGeral, { bold: true, fontSize: 12 }),
+                cell('')
+            ]);
+            
+            rows.push([
+                cell('SKUs:', { bold: true }),
+                cell(`Total: ${totalItensGeral}`, { bold: true }),
+                cell(`Disponíveis: ${totalItensGeral - totalIndisponiveis}`, { bold: true }),
+                cell(`Indisponíveis: ${totalIndisponiveis}`, { bold: true }),
+                cell(''), cell(''), cell(''), cell('')
+            ]);
+            
+            // LINHA EM BRANCO
+            rows.push([cell(''), cell(''), cell(''), cell(''), cell(''), cell(''), cell(''), cell('')]);
+            
+            // OBSERVAÇÕES
+            rows.push([
+                cell('OBSERVAÇÕES GERAIS:', { bold: true, align: 'left' }),
+                cell(''), cell(''), cell(''), cell(''), cell(''), cell(''), cell('')
+            ]);
+            
+            rows.push([
+                cell(inputs.obs, { align: 'left', wrap: true }),
+                cell(''), cell(''), cell(''), cell(''), cell(''), cell(''), cell('')
+            ]);
+            
+            // LINHA EM BRANCO
+            rows.push([cell(''), cell(''), cell(''), cell(''), cell(''), cell(''), cell(''), cell('')]);
+            
+            // DATA/HORA DO RELATÓRIO
+            const now = new Date();
+            const dataHora = now.toLocaleDateString('pt-BR') + ', ' + 
+                            now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            rows.push([
+                cell(`Relatório gerado em: ${dataHora}`),
+                cell(''), cell(''), cell(''), cell(''), cell(''), cell(''), cell('')
+            ]);
+            
+            // CONVERTER PARA WORKSHEET
+            const ws = XLSX.utils.aoa_to_sheet(rows.map(row => row.map(cell => cell.v)));
+            
+            // APLICAR ESTILOS
+            for (let R = 0; R < rows.length; R++) {
+                for (let C = 0; C < rows[R].length; C++) {
+                    if (rows[R][C]) {
+                        const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
+                        ws[cellRef] = rows[R][C];
+                    }
+                }
+            }
+            
+            // MESCLAR CÉLULAS
+            ws['!merges'] = [
+                { s: { r: 0, c: 0 }, e: { r: 0, c: 7 } }, // Título principal
+                { s: { r: 2, c: 0 }, e: { r: 2, c: 7 } }, // INFORMAÇÕES DA UNIDADE
+            ];
+            
+            // LARGURAS DAS COLUNAS
+            ws['!cols'] = [
+                { wch: 15 }, // Categoria
+                { wch: 15 }, // Modelo
+                { wch: 15 }, // Código SAP
+                { wch: 10 }, // RJ1401
+                { wch: 10 }, // SP1200
+                { wch: 10 }, // SP1500
+                { wch: 10 }, // Total
+                { wch: 15 }  // Status
+            ];
+            
+            // ADICIONAR AO WORKBOOK
+            XLSX.utils.book_append_sheet(wb, ws, 'Mix 3 CDs');
+            
+            // Nome do arquivo
+            const fileName = `Mix_3CDs_${inputs.rede.replace(/\s+/g, '_')}_${inputs.data.replace(/\//g, '-')}.xlsx`;
+            
+            // GERAR E BAIXAR
+            try {
+                XLSX.writeFile(wb, fileName);
+                showToast('Excel gerado com sucesso!');
+            } catch (error) {
+                console.error('Erro ao gerar Excel:', error);
+                showToast('Erro ao gerar Excel', 3000);
+            }
+            
+            // Fechar modal se estiver aberto
+            document.getElementById('result-modal').classList.add('hidden');
+        }
+
+        // Função para gerar PDF
+        function generatePDF() {
+            const inputs = {
+                rede: document.getElementById('rede').value || "-",
+                id: document.getElementById('id-rede').value || "-",
+                filial: document.getElementById('filial').value || "-",
+                data: formatDate(document.getElementById('data').value),
+                visitante: document.getElementById('visitante').value || "-"
+            };
+            
+            const observacao = document.getElementById('observacao').value || "Sem observações adicionais.";
+            
+            // Criar novo documento PDF
+            const doc = new jsPDF();
+            
+            // Título
+            doc.setFontSize(16);
+            doc.setTextColor(238, 46, 49);
+            doc.text('RELATÓRIO DE MIX - 3 CDs (RJ1401, SP1200, SP1500)', 15, 15);
+            
+            // Linha separadora
+            doc.setDrawColor(238, 46, 49);
+            doc.line(15, 20, 195, 20);
+            
+            // Informações da visita
+            doc.setFontSize(10);
+            doc.setTextColor(0, 0, 0);
+            doc.text(`Rede: ${inputs.rede}`, 15, 30);
+            doc.text(`ID Loja: ${inputs.id}`, 15, 35);
+            doc.text(`Filial: ${inputs.filial}`, 15, 40);
+            doc.text(`Data: ${inputs.data}`, 15, 45);
+            doc.text(`Visitante: ${inputs.visitante}`, 15, 50);
+            
+            // Preparar dados para a tabela
+            const tableData = [];
+            const categoriasOrdem = ["Geladeiras", "Lavadora", "Fogão", "Cooktop", "MWO", "Freezer", "Outros"];
+            
+            categoriasOrdem.forEach(cat => {
+                const itens = Object.values(selectedProducts)
+                    .filter(p => p.category === cat && !p.indisponivel)
+                    .sort((a, b) => a.product.localeCompare(b.product));
+                
+                itens.forEach(item => {
+                    const codigo = getProductCode(item.category, item.product);
+                    const cd = item.cd || {};
+                    tableData.push([
+                        cat, 
+                        item.product, 
+                        codigo, 
+                        cd.rj1401 || 0,
+                        cd.sp1200 || 0,
+                        cd.sp1500 || 0
+                    ]);
+                });
+            });
+            
+            // Adicionar indisponíveis
+            const indisponiveis = Object.values(selectedProducts).filter(p => p.indisponivel);
+            if (indisponiveis.length > 0) {
+                tableData.push(['INDISPONÍVEIS', '', '', '', '', '']);
+                indisponiveis.forEach(item => {
+                    const codigo = getProductCode(item.category, item.product);
+                    tableData.push([item.category, item.product, codigo, 'IND', 'IND', 'IND']);
+                });
+            }
+            
+            // Criar tabela
+            if (tableData.length > 0) {
+                doc.autoTable({
+                    startY: 60,
+                    head: [['Categoria', 'Modelo', 'Código', 'RJ1401', 'SP1200', 'SP1500']],
+                    body: tableData,
+                    theme: 'striped',
+                    headStyles: { fillColor: [238, 46, 49], textColor: 255 },
+                    styles: { fontSize: 8 },
+                    columnStyles: {
+                        0: { cellWidth: 35 },
+                        1: { cellWidth: 30 },
+                        2: { cellWidth: 25 },
+                        3: { cellWidth: 20 },
+                        4: { cellWidth: 20 },
+                        5: { cellWidth: 20 }
+                    }
+                });
+            }
+            
+            // Adicionar totais
+            let totalRJ = 0, totalSP1200 = 0, totalSP1500 = 0;
+            Object.values(selectedProducts).forEach(item => {
+                if (!item.indisponivel) {
+                    const cd = item.cd || {};
+                    totalRJ += cd.rj1401 || 0;
+                    totalSP1200 += cd.sp1200 || 0;
+                    totalSP1500 += cd.sp1500 || 0;
+                }
+            });
+            
+            const finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : 70;
+            doc.setFontSize(10);
+            doc.setTextColor(0, 0, 0);
+            doc.text(`Totais: RJ1401: ${totalRJ} | SP1200: ${totalSP1200} | SP1500: ${totalSP1500} | TOTAL: ${totalRJ + totalSP1200 + totalSP1500}`, 15, finalY);
+            
+            // Adicionar observações
+            doc.setFontSize(10);
+            doc.text('Observações:', 15, finalY + 10);
+            doc.setFontSize(8);
+            const splitObs = doc.splitTextToSize(observacao, 180);
+            doc.text(splitObs, 15, finalY + 15);
+            
+            // Nome do arquivo
+            const fileName = `Mix_3CDs_${inputs.rede || 'Loja'}.pdf`;
+            
+            // Salvar PDF
+            try {
+                doc.save(fileName);
+                showToast('PDF gerado com sucesso!');
+            } catch (error) {
+                console.error('Erro ao gerar PDF:', error);
+                showToast('Erro ao gerar PDF', 3000);
+            }
+            
+            // Fechar modal se estiver aberto
+            document.getElementById('result-modal').classList.add('hidden');
         }
 
         // Event Listeners
-        document.addEventListener('DOMContentLoaded', renderCatalog);
+        document.addEventListener('DOMContentLoaded', () => {
+            loadState();
+            renderCatalog();
+
+            // Setup input listeners to save to Firebase automatically
+            const formInputs = ['rede', 'id-rede', 'filial', 'data', 'visitante', 'observacao'];
+            formInputs.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.addEventListener('input', () => {
+                        if (typeof saveToFirebase === 'function') saveToFirebase();
+                    });
+                }
+            });
+            
+            // Add Firebase load button listener to open modal
+            document.getElementById('load-firebase-float').addEventListener('click', openLoadOptions);
+        });
+
+        // Controles do Load Options Modal
+        document.getElementById('load-my-data').addEventListener('click', () => {
+            closeLoadOptions();
+            loadFromFirebasePath(`users/${currentUser.uid}/lastState`);
+        });
+
+        document.getElementById('load-global-data').addEventListener('click', () => {
+            closeLoadOptions();
+            loadFromFirebasePath(`global/lastState`);
+        });
+
+        document.getElementById('cancel-load-options').addEventListener('click', closeLoadOptions);
 
         // Controles do modal de quantidade
-        document.getElementById('increase-qty').addEventListener('click', () => {
-            const input = document.getElementById('product-quantity');
-            input.value = Math.min(99, parseInt(input.value) + 1);
-        });
-
-        document.getElementById('decrease-qty').addEventListener('click', () => {
-            const input = document.getElementById('product-quantity');
-            input.value = Math.max(0, parseInt(input.value) - 1);
-        });
+        document.getElementById('set-indisponivel').addEventListener('click', setIndisponivel);
 
         document.getElementById('confirm-quantity').addEventListener('click', () => {
-            const quantity = parseInt(document.getElementById('product-quantity').value);
+            const rj = parseInt(document.getElementById('cd-rj1401').value) || 0;
+            const sp12 = parseInt(document.getElementById('cd-sp1200').value) || 0;
+            const sp15 = parseInt(document.getElementById('cd-sp1500').value) || 0;
             
             if (currentProduct && currentCategory && currentButton) {
                 const productId = `${currentCategory}-${currentProduct}`;
                 
-                if (quantity > 0) {
+                if (rj + sp12 + sp15 > 0) {
                     selectedProducts[productId] = {
                         product: currentProduct,
                         category: currentCategory,
-                        quantity: quantity
+                        cd: { rj1401: rj, sp1200: sp12, sp1500: sp15 },
+                        indisponivel: false,
+                        codigo: currentButton.dataset.codigo
                     };
                 } else {
                     delete selectedProducts[productId];
                 }
                 
-                updateButtonVisual(currentButton, currentCategory, currentProduct, quantity);
+                updateButtonVisual(currentButton, productId);
+                saveState();
             }
             
             closeQuantityModal();
@@ -675,30 +1700,151 @@
             }
         });
 
+        // Controles do modal de edição
+        document.getElementById('edit-set-indisponivel').addEventListener('click', () => {
+            if (editingProductId && selectedProducts[editingProductId]) {
+                const product = selectedProducts[editingProductId];
+                
+                selectedProducts[editingProductId] = {
+                    ...product,
+                    cd: { rj1401: 0, sp1200: 0, sp1500: 0 },
+                    indisponivel: true
+                };
+                
+                saveState();
+                renderCatalog();
+                closeEditModal();
+                showToast('Produto marcado como indisponível');
+            }
+        });
+
+        document.getElementById('edit-remove-product').addEventListener('click', () => {
+            if (editingProductId) {
+                delete selectedProducts[editingProductId];
+                saveState();
+                renderCatalog();
+                closeEditModal();
+                showToast('Produto removido da lista');
+            }
+        });
+
+        document.getElementById('confirm-edit').addEventListener('click', () => {
+            if (editingProductId && selectedProducts[editingProductId]) {
+                const rj = parseInt(document.getElementById('edit-cd-rj1401').value) || 0;
+                const sp12 = parseInt(document.getElementById('edit-cd-sp1200').value) || 0;
+                const sp15 = parseInt(document.getElementById('edit-cd-sp1500').value) || 0;
+                const product = selectedProducts[editingProductId];
+                
+                if (rj + sp12 + sp15 > 0) {
+                    selectedProducts[editingProductId] = {
+                        ...product,
+                        cd: { rj1401: rj, sp1200: sp12, sp1500: sp15 },
+                        indisponivel: false
+                    };
+                } else {
+                    delete selectedProducts[editingProductId];
+                }
+                
+                saveState();
+                renderCatalog();
+                closeEditModal();
+                showToast('Produto atualizado com sucesso');
+            }
+        });
+
+        document.getElementById('cancel-edit').addEventListener('click', closeEditModal);
+
+        // Fechar modal de edição ao clicar fora
+        document.getElementById('edit-quantity-modal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('edit-quantity-modal')) {
+                closeEditModal();
+            }
+        });
+
         // Reset all
         document.getElementById('reset-all').addEventListener('click', () => {
             if(confirm('Limpar todas as seleções?')) {
                 selectedProducts = {};
+                localStorage.removeItem('selectedProducts');
                 renderCatalog();
                 document.getElementById('rede').value = '';
                 document.getElementById('id-rede').value = '';
                 document.getElementById('filial').value = '';
+                document.getElementById('visitante').value = '';
+                document.getElementById('observacao').value = '';
                 window.scrollTo(0,0);
+                showToast('Todos os dados foram limpos');
+                if (typeof saveToFirebase === 'function') saveToFirebase();
             }
         });
 
-        // Gerar relatório
+        // Botões de exportação rápida no header
+        document.getElementById('export-excel').addEventListener('click', generateStyledExcel);
+        document.getElementById('export-pdf').addEventListener('click', generatePDF);
+
+        // Botão flutuante para adicionar produto
+        document.getElementById('add-product-float').addEventListener('click', () => {
+            document.getElementById('add-product-modal').classList.remove('hidden');
+        });
+
+        document.getElementById('cancel-add-product').addEventListener('click', () => {
+            document.getElementById('add-product-modal').classList.add('hidden');
+        });
+
+        document.getElementById('confirm-add-product').addEventListener('click', () => {
+            const category = document.getElementById('new-product-category').value;
+            const productCode = document.getElementById('new-product-code').value.trim().toUpperCase();
+            const productSAP = document.getElementById('new-product-sap').value.trim() || "SEM CADASTRO";
+            
+            if (productCode === '') {
+                alert('Digite o código do produto');
+                return;
+            }
+            
+            const productId = `${category}-${productCode}`;
+            
+            // Salvar no catálogo personalizado
+            customProducts[productId] = {
+                category: category,
+                product: productCode,
+                codigo: productSAP
+            };
+            localStorage.setItem('customProducts', JSON.stringify(customProducts));
+            
+            // Adicionar aos selecionados
+            selectedProducts[productId] = {
+                product: productCode,
+                category: category,
+                cd: { rj1401: 0, sp1200: 0, sp1500: 0 },
+                indisponivel: false,
+                codigo: productSAP
+            };
+            
+            saveState();
+            
+            // Re-renderizar
+            renderCatalog();
+            
+            // Limpar e fechar modal
+            document.getElementById('new-product-code').value = '';
+            document.getElementById('new-product-sap').value = '';
+            document.getElementById('add-product-modal').classList.add('hidden');
+            
+            showToast('Produto adicionado com sucesso!');
+        });
+
+        // Gerar relatório (abrir modal)
         document.getElementById('generate-report').addEventListener('click', () => {
             const inputs = {
                 rede: document.getElementById('rede').value || "-",
                 id: document.getElementById('id-rede').value || "-",
                 filial: document.getElementById('filial').value || "-",
-                data: formatDate(document.getElementById('data').value)
+                data: formatDate(document.getElementById('data').value),
+                visitante: document.getElementById('visitante').value || "-"
             };
 
-            const selectedData = getSelectedData();
-            
-            const textReport = generateTextReport(inputs, selectedData);
+            const observacao = document.getElementById('observacao').value;
+            const textReport = generateTextReport(inputs, selectedProducts, observacao);
             
             // Preencher Modal
             document.getElementById('text-preview').textContent = textReport;
@@ -707,15 +1853,13 @@
             const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(textReport)}`;
             document.getElementById('whatsapp-link').href = whatsappUrl;
 
-            // Configurar PDF
-            document.getElementById('generate-pdf').onclick = () => generatePDF(inputs, selectedData);
-            
-            // Configurar Excel
-            document.getElementById('generate-excel').onclick = () => generateExcel(inputs, selectedData);
-
             // Abrir Modal
             document.getElementById('result-modal').classList.remove('hidden');
         });
+
+        // Configurar eventos dos botões Excel e PDF no modal
+        document.getElementById('generate-excel').addEventListener('click', generateStyledExcel);
+        document.getElementById('generate-pdf').addEventListener('click', generatePDF);
 
         document.getElementById('close-modal').addEventListener('click', () => {
             document.getElementById('result-modal').classList.add('hidden');
@@ -727,6 +1871,36 @@
                 document.getElementById('result-modal').classList.add('hidden');
             }
         });
+
+        // Fechar modal de adicionar produto ao clicar fora
+        document.getElementById('add-product-modal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('add-product-modal')) {
+                document.getElementById('add-product-modal').classList.add('hidden');
+            }
+        });
+
+        // Fechar modal de opções de load ao clicar fora
+        document.getElementById('load-options-modal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('load-options-modal')) {
+                closeLoadOptions();
+            }
+        });
+
+        // Tecla ESC para fechar modais
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.getElementById('quantity-modal').classList.remove('active');
+                document.getElementById('add-product-modal').classList.add('hidden');
+                document.getElementById('edit-quantity-modal').classList.add('hidden');
+                document.getElementById('result-modal').classList.add('hidden');
+                closeLoadOptions();
+            }
+        });
+
+        // Salvar estado automaticamente quando a página for fechada
+        window.addEventListener('beforeunload', () => {
+            saveState();
+        });
     </script>
 </body>
-</html>
+    </html>
